@@ -1,0 +1,12 @@
+21-10-2024
+PairA        ,Pts,Pair B       ,Pts
+Chetan/Kishan,21 ,CM/Bhavin    ,14
+Bhavin/Kishan,21 ,Chetan/CM    ,7
+Nikhil/Kirti ,21 ,Amir/Bijal   ,16
+Chetan/Bhavin,16 ,Kishan/CM    ,21
+Nikhil/Amir  ,21 ,Bijal/Kirti  ,14
+Nikhil/Bijal ,21 ,Amir/Kirti   ,11
+Bhavin/Amir  ,21 ,CM/Bijal     ,13
+Bijal/Bhavin ,21 ,Amir/CM      ,13
+Nikhil/Kishan,21 ,Chetan/Kirti ,16
+Kirti/Kishan ,21 ,Nikhil/Chetan,15
