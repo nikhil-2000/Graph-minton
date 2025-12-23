@@ -28,24 +28,20 @@
 //         Since: I64,
 //     }
 // }
-//
-// N:: GameId {
-//     PlayedOn: Date,
-//     Order: I8,
-// }
+
 
 N::Player {
-    Name: String,
-    Aliases: [String],
-    IsSub: Boolean,
+    name: String,
+    aliases: [String],
+    isSub: Boolean,
 }
 
 E::With {
     From: Player,
     To: Player,
     Properties: {
-        PlayedOn: Date,
-        Order: I8,
+        playedOn: Date,
+        order: I8,
     }
 }
 
@@ -53,9 +49,9 @@ E::Against {
     From: Player,
     To: Player,
     Properties: {
-        PlayedOn: Date,
-        Order: I8,
-        points_scored: I8,
-        points_allowed: I8,
+        playedOn: Date,
+        order: I8,
+        pointsScored: I8,
+        pointsConceded: I8,
     }
 }
