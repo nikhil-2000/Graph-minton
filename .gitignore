@@ -1,3 +1,4 @@
-.helix/
+*/.helix/*
 target/
 *.log
+*.pyc
