@@ -18,28 +18,27 @@
 // or checkout our GitHub at https://github.com/HelixDB/helix-db
 
 
-// AddPlayer(name, aliases, isSub) -> N::Player 
-QUERY CreatePlayer(name: String, aliases: [String], isSub:Boolean) =>
-    player <- AddN<Player>({name: name, aliases: aliases, isSub: isSub})
+// AddPlayer(name, aliases, is_sub) -> N::Player 
+QUERY CreatePlayer(name: String, aliases: [String], is_sub:Boolean) =>
+    player <- AddN<Player>({name: name, aliases: aliases, is_sub: is_sub})
     RETURN player 
 
-// AddPair (fromPlayer, toPlayer, playedOn, order) -> E::With (x2)
+// AddPair (fromPlayer, toPlayer, played_on, order) -> E::With (x2)
 // Asuming that these queries can add the reverse edge too (they can't...)
-QUERY CreateWith (from: ID, to: ID, playedOn: Date, order: I8) =>
+QUERY CreateWith (from: ID, to: ID, played_on: Date, order: I8) =>
     pair <- AddE<With>({
-        playedOn: playedOn,
+        played_on: played_on,
         order: order
     })::From(from)::To(to)
     RETURN pair
 
-// AddOpp (fromPlayer, toPlayer, pointsScored, pointsConceded, playedOn, order) -> E::Against (x2)
+// AddOpp (fromPlayer, toPlayer, points_scored, pointsConceded, played_on, order) -> E::Against (x2)
 // Asuming that these queries can add the reverse edge too (they can't...)
-QUERY CreateAgainst (from: ID, to: ID, playedOn: Date, order: I8, pointsScored:I8, pointsConceded: I8) =>
+QUERY CreateAgainst (from: ID, to: ID, played_on: Date, order: I8, points_scored:I8) =>
     opp <- AddE<Against>({
-        playedOn: playedOn,
+        played_on: played_on,
         order: order,
-        pointsScored: pointsScored,
-        pointsConceded: pointsConceded,
+        points_scored: points_scored,
     })::From(from)::To(to)
     RETURN opp
 

@@ -33,14 +33,14 @@
 N::Player {
     name: String,
     aliases: [String],
-    isSub: Boolean,
+    is_sub: Boolean,
 }
 
 E::With {
     From: Player,
     To: Player,
     Properties: {
-        playedOn: Date,
+        played_on: Date,
         order: I8,
     }
 }
@@ -49,9 +49,8 @@ E::Against {
     From: Player,
     To: Player,
     Properties: {
-        playedOn: Date,
+        played_on: Date,
         order: I8,
-        pointsScored: I8,
-        pointsConceded: I8,
+        points_scored: I8,
     }
 }
