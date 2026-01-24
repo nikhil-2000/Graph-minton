@@ -1,83 +1,11 @@
-use chrono::{DateTime, Utc};
+mod models;
+mod requests;
+
+use chrono::Utc;
 use helix_rs::{HelixDB, HelixDBClient};
-use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
-struct CreatePlayerResponse {
-    player: Player,
-}
-
-#[derive(Deserialize)]
-struct Player {
-    aliases: Vec<String>,
-    id: String,
-    is_sub: bool,
-    label: String,
-    name: String,
-}
-
-#[derive(Serialize)]
-struct CreatePlayerRequest {
-    name: String,
-    aliases: Vec<String>,
-    is_sub: bool,
-}
-
-impl CreatePlayerRequest {
-    pub fn new(name: String) -> Self {
-        Self {
-            name,
-            aliases: Vec::new(),
-            is_sub: false,
-        }
-    }
-}
-
-#[derive(Serialize)]
-struct CreateWithRequest {
-    from: String,
-    to: String,
-    played_on: String,
-    order: u8,
-}
-
-impl CreateWithRequest {
-    pub fn new(from: &str, to: &str, played_on: &DateTime<Utc>, order: u8) -> Self {
-        Self {
-            from: from.to_string(),
-            to: to.to_string(),
-            played_on: played_on.to_rfc3339(),
-            order,
-        }
-    }
-}
-
-#[derive(Serialize)]
-struct CreateAgainstRequest {
-    from: String,
-    to: String,
-    played_on: String,
-    order: u8,
-    points_scored: u8,
-}
-
-impl CreateAgainstRequest {
-    pub fn new(
-        from: &str,
-        to: &str,
-        played_on: &DateTime<Utc>,
-        order: u8,
-        points_scored: u8,
-    ) -> Self {
-        Self {
-            from: from.to_string(),
-            to: to.to_string(),
-            played_on: played_on.to_rfc3339(),
-            order,
-            points_scored,
-        }
-    }
-}
+use models::CreatePlayerResponse;
+use requests::{CreateAgainstRequest, CreatePlayerRequest, CreateWithRequest};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -115,3 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+
+// Files
+// Parse into a struct of games
+// For each set of games -> for each game
+// -> check if player nodes exist -> add if not
+// -> insert with edges
+// -> insert against edges
