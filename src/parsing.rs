@@ -19,7 +19,7 @@ pub fn load_all_games(data_source: &str) -> GamesLoadResult {
                 .filter_map(entry_to_path)
                 .filter_map(|path| path.to_str().map(|s| s.to_string()))
                 .map(|path_str| {
-                    load_game(&path_str)
+                    load_games(&path_str)
                         .map(|games| (games, None))
                         .unwrap_or_else(|e| {
                             eprintln!("Failed to load game file '{}': {}", path_str, e);
@@ -86,10 +86,10 @@ pub fn create_alias_lookup(aliases: &HashMap<String, Vec<String>>) -> HashMap<St
 
 pub fn normalize_games(mut games: Vec<Game>, alias_lookup: &HashMap<String, String>) -> Vec<Game> {
     games.iter_mut().for_each(|game| {
-        game.player_a = normalize_player(&game.player_a, alias_lookup);
-        game.player_b = normalize_player(&game.player_b, alias_lookup);
-        game.player_x = normalize_player(&game.player_x, alias_lookup);
-        game.player_y = normalize_player(&game.player_y, alias_lookup);
+        game.player_a = convert_if_alias(&game.player_a, alias_lookup);
+        game.player_b = convert_if_alias(&game.player_b, alias_lookup);
+        game.player_x = convert_if_alias(&game.player_x, alias_lookup);
+        game.player_y = convert_if_alias(&game.player_y, alias_lookup);
     });
 
     games
@@ -102,23 +102,25 @@ fn entry_to_path(entry_res: Result<fs::DirEntry, std::io::Error>) -> Option<std:
     })
 }
 
-fn load_game(path: &str) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
-    let rdr = csv::Reader::from_path(path)?;
-
-    Ok(rdr
-        .into_deserialize()
-        .filter_map(|result| {
-            result.map_err(|_| eprintln!("{}: failed to parse record", path)).ok()
-        })
-        .collect())
+fn load_games(path: &str) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
+    csv::Reader::from_path(path)?
+        .deserialize()
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)
 }
 
-fn normalize_player(player: &str, alias_lookup: &HashMap<String, String>) -> String {
-    alias_lookup.get(player).cloned().unwrap_or_else(|| player.to_string())
+fn convert_if_alias(player: &str, alias_lookup: &HashMap<String, String>) -> String {
+    alias_lookup
+        .get(player)
+        .cloned()
+        .unwrap_or_else(|| player.to_string())
 }
 
 fn load_alias_file(path: std::path::PathBuf) -> Result<(String, Vec<String>), String> {
-    let path_str = path.to_str().ok_or_else(|| format!("{:?}", path))?.to_string();
+    let path_str = path
+        .to_str()
+        .ok_or_else(|| format!("{:?}", path))?
+        .to_string();
     let main_name = path
         .file_stem()
         .and_then(|s| s.to_str())
@@ -127,9 +129,14 @@ fn load_alias_file(path: std::path::PathBuf) -> Result<(String, Vec<String>), St
 
     match fs::read_to_string(&path_str) {
         Ok(contents) => {
-            let aliases = contents.lines().map(|line| line.to_string()).collect();
+            let aliases = contents.lines().filter_map(remove_empty_lines).collect();
             Ok((main_name, aliases))
         }
         Err(_) => Err(path_str),
     }
+}
+
+fn remove_empty_lines(line: &str) -> Option<String> {
+    let trimmed = line.trim();
+    (!trimmed.is_empty()).then_some(trimmed.to_string())
 }

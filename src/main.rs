@@ -13,7 +13,7 @@ use crate::{
 fn main() {
     let games_result = load_all_games(SCORES_FOLDER);
     let aliases_result = load_all_aliases(ALIASES_FOLDER);
-    
+    println!();
     // Print any failures
     if !games_result.failed_files.is_empty() {
         eprintln!("Failed to load {} game file(s):", games_result.failed_files.len());
@@ -47,8 +47,14 @@ fn main() {
     
     println!("Total games: {}", normalized_games.len());
 
-    println!("Unique player names:");
+    println!("\nUnique player names:");
     for name in unique_player_names {
         println!("{}", name);
+    }
+
+    // log alias map
+    println!("\nAlias mappings:");
+    for (alias, canonical) in &alias_lookup {
+        println!("  {} -> {}", alias, canonical);
     }
 }
