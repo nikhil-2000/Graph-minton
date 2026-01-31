@@ -6,8 +6,8 @@ mod requests;
 use std::collections::HashSet;
 
 use crate::{
-    data_folders::{ALIASES_FOLDER, SCORES_FOLDER},
-    parsing::{create_alias_lookup, load_all_aliases, load_all_games, normalize_games},
+    data_folders::{ALIASES_FOLDER, SCORES_FOLDER}, 
+    parsing::{load_all_aliases, load_all_games, normalize_games},
 };
 
 fn main() {
@@ -33,8 +33,7 @@ fn main() {
         println!("Successfully loaded all alias files");
     }
     
-    let alias_lookup = create_alias_lookup(&aliases_result.aliases);
-    let normalized_games = normalize_games(games_result.games, &alias_lookup);
+    let normalized_games = normalize_games(games_result.games, &aliases_result.aliases);
 
     let mut unique_player_names: HashSet<String> = HashSet::new();
 
@@ -52,9 +51,4 @@ fn main() {
         println!("{}", name);
     }
 
-    // log alias map
-    println!("\nAlias mappings:");
-    for (alias, canonical) in &alias_lookup {
-        println!("  {} -> {}", alias, canonical);
-    }
 }
