@@ -2,34 +2,73 @@ use std::{collections::HashMap, fs};
 
 use crate::models::Game;
 
-pub fn load_all_games(data_source: &str) -> Vec<Game> {
+pub struct GamesLoadResult {
+    pub games: Vec<Game>,
+    pub failed_files: Vec<String>,
+}
+
+pub struct AliasesLoadResult {
+    pub aliases: HashMap<String, Vec<String>>,
+    pub failed_files: Vec<String>,
+}
+
+pub fn load_all_games(data_source: &str) -> GamesLoadResult {
     match fs::read_dir(data_source) {
-        Ok(entries) => entries
-            .filter_map(entry_to_path)
-            .filter_map(|path| path.to_str().map(|s| s.to_string()))
-            .flat_map(|path_str| {
-                load_game(&path_str).unwrap_or_else(|e| {
-                    eprintln!("Failed to load game file '{}': {}", path_str, e);
-                    Vec::new()
+        Ok(entries) => {
+            let (games, failed_files): (Vec<_>, Vec<_>) = entries
+                .filter_map(entry_to_path)
+                .filter_map(|path| path.to_str().map(|s| s.to_string()))
+                .map(|path_str| {
+                    load_game(&path_str)
+                        .map(|games| (games, None))
+                        .unwrap_or_else(|e| {
+                            eprintln!("Failed to load game file '{}': {}", path_str, e);
+                            (Vec::new(), Some(path_str))
+                        })
                 })
-            })
-            .collect(),
+                .unzip();
+
+            GamesLoadResult {
+                games: games.into_iter().flatten().collect(),
+                failed_files: failed_files.into_iter().flatten().collect(),
+            }
+        }
         Err(e) => {
             eprintln!("Failed to read games directory '{}': {}", data_source, e);
-            Vec::new()
+            GamesLoadResult {
+                games: Vec::new(),
+                failed_files: vec![data_source.to_string()],
+            }
         }
     }
 }
 
-pub fn load_all_aliases(data_source: &str) -> HashMap<String, Vec<String>> {
+pub fn load_all_aliases(data_source: &str) -> AliasesLoadResult {
     match fs::read_dir(data_source) {
-        Ok(entries) => entries
-            .filter_map(entry_to_path)
-            .filter_map(load_alias_file)
-            .collect(),
+        Ok(entries) => {
+            let (aliases, failed_files): (Vec<_>, Vec<_>) = entries
+                .filter_map(entry_to_path)
+                .map(|path| load_alias_file(path))
+                .map(|result| match result {
+                    Ok((name, aliases)) => (Some((name, aliases)), None),
+                    Err(path_str) => {
+                        eprintln!("Failed to load alias file '{}'", path_str);
+                        (None, Some(path_str))
+                    }
+                })
+                .unzip();
+
+            AliasesLoadResult {
+                aliases: aliases.into_iter().flatten().collect(),
+                failed_files: failed_files.into_iter().flatten().collect(),
+            }
+        }
         Err(e) => {
             eprintln!("Failed to read aliases directory '{}': {}", data_source, e);
-            HashMap::new()
+            AliasesLoadResult {
+                aliases: HashMap::new(),
+                failed_files: vec![data_source.to_string()],
+            }
         }
     }
 }
@@ -78,18 +117,19 @@ fn normalize_player(player: &str, alias_lookup: &HashMap<String, String>) -> Str
     alias_lookup.get(player).cloned().unwrap_or_else(|| player.to_string())
 }
 
-fn load_alias_file(path: std::path::PathBuf) -> Option<(String, Vec<String>)> {
-    let path_str = path.to_str()?.to_string();
-    let main_name = path.file_stem()?.to_str()?.to_string();
-    
+fn load_alias_file(path: std::path::PathBuf) -> Result<(String, Vec<String>), String> {
+    let path_str = path.to_str().ok_or_else(|| format!("{:?}", path))?.to_string();
+    let main_name = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| path_str.clone())?
+        .to_string();
+
     match fs::read_to_string(&path_str) {
         Ok(contents) => {
             let aliases = contents.lines().map(|line| line.to_string()).collect();
-            Some((main_name, aliases))
+            Ok((main_name, aliases))
         }
-        Err(e) => {
-            eprintln!("Failed to load alias file '{}': {}", path_str, e);
-            None
-        }
+        Err(_) => Err(path_str),
     }
 }
