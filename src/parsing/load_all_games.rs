@@ -50,3 +50,77 @@ fn load_games(path: &str) -> (Vec<Game>, Option<String>) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_all_games_happy_path() {
+        let result = load_all_games("src/parsing/test_data/games");
+
+        // Check that we loaded games successfully
+        assert!(!result.games.is_empty(), "Should load some games");
+        assert_eq!(result.games.len(), 3, "Should load 3 valid games");
+
+        // Check Week01 games
+        let week01_games: Vec<_> = result
+            .games
+            .iter()
+            .filter(|g| g.date == "2026-01-01")
+            .collect();
+        assert_eq!(week01_games.len(), 2, "Week01 should have 2 games");
+
+        // Check first game details
+        let game1 = &result.games[0];
+        assert_eq!(game1.player_a, "Nikhil");
+        assert_eq!(game1.player_b, "Chet");
+        assert_eq!(game1.points_ab, 21);
+        assert_eq!(game1.player_x, "Chan");
+        assert_eq!(game1.player_y, "Bhavin");
+        assert_eq!(game1.points_xy, 15);
+
+        // Check Week02 games
+        let week02_games: Vec<_> = result
+            .games
+            .iter()
+            .filter(|g| g.date == "2026-01-08")
+            .collect();
+        assert_eq!(week02_games.len(), 1, "Week02 should have 1 game");
+        
+    }
+
+    #[test]
+    fn test_load_all_games_invalid_data() {
+        let result = load_all_games("src/parsing/test_data/games");
+
+        // Should record Invalid.csv as a failed file since it has invalid data
+        assert!(
+            result
+                .failed_files
+                .iter()
+                .any(|f| f.contains("Invalid.csv")),
+            "Should record Invalid.csv as failed"
+        );
+
+        // Should still have loaded the 3 valid games
+        assert_eq!(result.games.len(), 3, "Should load valid games and skip invalid");
+    }
+
+    #[test]
+    fn test_load_all_games_nonexistent_directory() {
+        let result = load_all_games("nonexistent/games/directory");
+
+        // Should fail to read directory
+        assert!(
+            result
+                .failed_files
+                .contains(&"nonexistent/games/directory".to_string()),
+            "Should record nonexistent directory as failed"
+        );
+        assert!(
+            result.games.is_empty(),
+            "Should have no games from failed directory"
+        );
+    }
+}

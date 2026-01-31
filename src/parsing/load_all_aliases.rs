@@ -54,3 +54,69 @@ fn load_alias_file(path: &PathBuf) -> Result<(String, Vec<String>), String> {
         Err(_) => Err(format!("Failed to read file: {}", main_name)),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_load_all_aliases_happy_path() {
+        let result = load_all_aliases("src/parsing/test_data/aliases");
+
+        // Check that we loaded aliases successfully
+        assert!(!result.aliases.is_empty(), "Should load some aliases");
+        
+        // Check Chetan aliases
+        assert!(
+            result.aliases.contains_key("Chetan"),
+            "Should have Chetan as a key"
+        );
+        let chetan_aliases = &result.aliases["Chetan"];
+        assert_eq!(chetan_aliases.len(), 3, "Chetan should have 3 aliases");
+        assert!(chetan_aliases.contains(&"Chet".to_string()));
+        assert!(chetan_aliases.contains(&"Chet P".to_string()));
+        assert!(chetan_aliases.contains(&"C. Pat".to_string()));
+
+        // Check Nikhil aliases
+        assert!(
+            result.aliases.contains_key("Nikhil"),
+            "Should have Nikhil as a key"
+        );
+        let nikhil_aliases = &result.aliases["Nikhil"];
+        assert_eq!(nikhil_aliases.len(), 2, "Nikhil should have 2 aliases");
+        assert!(nikhil_aliases.contains(&"Nik".to_string()));
+        assert!(nikhil_aliases.contains(&"Nik P".to_string()));
+
+        // Empty file should load with 0 aliases
+        assert!(
+            result.aliases.contains_key("Empty"),
+            "Should have Empty as a key"
+        );
+        assert_eq!(
+            result.aliases["Empty"].len(),
+            0,
+            "Empty file should have 0 aliases"
+        );
+
+        // No failed files in happy path
+        assert!(
+            result.failed_files.is_empty(),
+            "Should have no failed files"
+        );
+    }
+
+    #[test]
+    fn test_load_all_aliases_nonexistent_directory() {
+        let result = load_all_aliases("nonexistent/directory");
+
+        // Should fail to read directory
+        assert!(
+            result.failed_files.contains(&"nonexistent/directory".to_string()),
+            "Should record nonexistent directory as failed"
+        );
+        assert!(
+            result.aliases.is_empty(),
+            "Should have no aliases from failed directory"
+        );
+    }
+}
