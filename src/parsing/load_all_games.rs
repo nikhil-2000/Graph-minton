@@ -19,10 +19,12 @@ pub fn load_all_games(data_source: &str) -> GamesLoadResult {
         }
     };
 
-    let paths = entries
+    let mut paths = entries
         .filter_map(entry_to_path)
         .filter_map(|path| path.to_str().map(|s| s.to_string()))
         .collect::<Vec<_>>();
+
+    paths.sort();
 
     let (games, failed_files): (Vec<_>, Vec<_>) = paths
         .iter()
@@ -87,7 +89,6 @@ mod tests {
             .filter(|g| g.date == "2026-01-08")
             .collect();
         assert_eq!(week02_games.len(), 1, "Week02 should have 1 game");
-        
     }
 
     #[test]
