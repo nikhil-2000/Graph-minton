@@ -3,96 +3,35 @@ use std::{collections::HashMap, fs};
 use crate::models::Game;
 
 pub fn load_all_games(data_source: &str) -> Vec<Game> {
-    let file_paths = match fs::read_dir(data_source) {
-        Ok(r) => r,
+    match fs::read_dir(data_source) {
+        Ok(entries) => entries
+            .filter_map(entry_to_path)
+            .filter_map(|path| path.to_str().map(|s| s.to_string()))
+            .flat_map(|path_str| {
+                load_game(&path_str).unwrap_or_else(|e| {
+                    eprintln!("Failed to load game file '{}': {}", path_str, e);
+                    Vec::new()
+                })
+            })
+            .collect(),
         Err(e) => {
             eprintln!("Failed to read games directory '{}': {}", data_source, e);
-            return Vec::new();
-        }
-    };
-
-    let mut games: Vec<Game> = Vec::new();
-
-    for entry_res in file_paths {
-        match entry_res {
-            Ok(entry) => {
-                let path = entry.path();
-                if path.is_file() {
-                    match path.to_str() {
-                        Some(path_str) => match load_game(path_str) {
-                            Ok(mut sheet_games) => games.append(&mut sheet_games),
-                            Err(e) => eprintln!("Failed to load game file '{}': {}", path_str, e),
-                        },
-                        None => eprintln!("Skipping non-UTF8 path: {:?}", path),
-                    }
-                }
-            }
-            Err(e) => eprintln!("Failed to read directory entry: {}", e),
+            Vec::new()
         }
     }
-
-    games
-}
-
-fn load_game(path: &str) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
-    let mut games = Vec::new();
-    let mut rdr = csv::Reader::from_path(path)?;
-
-    for result in rdr.deserialize() {
-        match result {
-            Ok(game) => games.push(game),
-            Err(e) => {
-                eprintln!("{}: failed to parse record: {}", path, e);
-            }
-        }
-    }
-
-    Ok(games)
 }
 
 pub fn load_all_aliases(data_source: &str) -> HashMap<String, Vec<String>> {
-    let file_paths = match fs::read_dir(data_source) {
-        Ok(r) => r,
+    match fs::read_dir(data_source) {
+        Ok(entries) => entries
+            .filter_map(entry_to_path)
+            .filter_map(load_alias_file)
+            .collect(),
         Err(e) => {
             eprintln!("Failed to read aliases directory '{}': {}", data_source, e);
-            return HashMap::new();
-        }
-    };
-
-    let mut aliases: HashMap<String, Vec<String>> = HashMap::new();
-    for entry_res in file_paths {
-        match entry_res {
-            Ok(entry) => {
-                let path = entry.path();
-                if path.is_file() {
-                    match path.to_str() {
-                        Some(path_str) => match load_alias(path_str) {
-                            Ok(alias_list) => match path.file_stem().and_then(|s| s.to_str()) {
-                                Some(main_name) => {
-                                    aliases.insert(main_name.to_string(), alias_list);
-                                }
-                                None => {
-                                    eprintln!("Skipping alias file with non-UTF8 stem: {:?}", path)
-                                }
-                            },
-                            Err(e) => eprintln!("Failed to load alias file '{}': {}", path_str, e),
-                        },
-                        None => eprintln!("Skipping non-UTF8 path: {:?}", path),
-                    }
-                }
-            }
-            Err(e) => eprintln!("Failed to read directory entry: {}", e),
+            HashMap::new()
         }
     }
-
-    aliases
-}
-
-fn load_alias(path: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    Ok(fs::read_to_string(path)?
-        .lines()
-        .map(|line| line.to_string())
-        .collect::<Vec<String>>())
 }
 
 pub fn create_alias_lookup(aliases: &HashMap<String, Vec<String>>) -> HashMap<String, String> {
@@ -107,27 +46,50 @@ pub fn create_alias_lookup(aliases: &HashMap<String, Vec<String>>) -> HashMap<St
 }
 
 pub fn normalize_games(mut games: Vec<Game>, alias_lookup: &HashMap<String, String>) -> Vec<Game> {
-    for game in &mut games {
-        game.player_a = alias_lookup
-            .get(&game.player_a)
-            .cloned()
-            .unwrap_or_else(|| game.player_a.clone());
-
-        game.player_b = alias_lookup
-            .get(&game.player_b)
-            .cloned()
-            .unwrap_or_else(|| game.player_b.clone());
-
-        game.player_x = alias_lookup
-            .get(&game.player_x)
-            .cloned()
-            .unwrap_or_else(|| game.player_x.clone());
-
-        game.player_y = alias_lookup
-            .get(&game.player_y)
-            .cloned()
-            .unwrap_or_else(|| game.player_y.clone());
-    }
+    games.iter_mut().for_each(|game| {
+        game.player_a = normalize_player(&game.player_a, alias_lookup);
+        game.player_b = normalize_player(&game.player_b, alias_lookup);
+        game.player_x = normalize_player(&game.player_x, alias_lookup);
+        game.player_y = normalize_player(&game.player_y, alias_lookup);
+    });
 
     games
+}
+
+fn entry_to_path(entry_res: Result<fs::DirEntry, std::io::Error>) -> Option<std::path::PathBuf> {
+    entry_res.ok().and_then(|entry| {
+        let path = entry.path();
+        path.is_file().then_some(path)
+    })
+}
+
+fn load_game(path: &str) -> Result<Vec<Game>, Box<dyn std::error::Error>> {
+    let rdr = csv::Reader::from_path(path)?;
+
+    Ok(rdr
+        .into_deserialize()
+        .filter_map(|result| {
+            result.map_err(|_| eprintln!("{}: failed to parse record", path)).ok()
+        })
+        .collect())
+}
+
+fn normalize_player(player: &str, alias_lookup: &HashMap<String, String>) -> String {
+    alias_lookup.get(player).cloned().unwrap_or_else(|| player.to_string())
+}
+
+fn load_alias_file(path: std::path::PathBuf) -> Option<(String, Vec<String>)> {
+    let path_str = path.to_str()?.to_string();
+    let main_name = path.file_stem()?.to_str()?.to_string();
+    
+    match fs::read_to_string(&path_str) {
+        Ok(contents) => {
+            let aliases = contents.lines().map(|line| line.to_string()).collect();
+            Some((main_name, aliases))
+        }
+        Err(e) => {
+            eprintln!("Failed to load alias file '{}': {}", path_str, e);
+            None
+        }
+    }
 }
