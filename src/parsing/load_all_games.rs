@@ -19,12 +19,10 @@ pub fn load_all_games(data_source: &str) -> GamesLoadResult {
         }
     };
 
-    let mut paths = entries
+    let paths = entries
         .filter_map(entry_to_path)
         .filter_map(|path| path.to_str().map(|s| s.to_string()))
         .collect::<Vec<_>>();
-
-    // paths.sort();
 
     let (games, failed_files): (Vec<_>, Vec<_>) = paths
         .iter()
@@ -74,7 +72,7 @@ mod tests {
         assert_eq!(week01_games.len(), 2, "Week01 should have 2 games");
 
         // Check first game details
-        let game1 = &result.games[0];
+        let game1 = &week01_games[0];
         assert_eq!(game1.player_a, "Nikhil");
         assert_eq!(game1.player_b, "Chet");
         assert_eq!(game1.points_ab, 21);
@@ -89,6 +87,13 @@ mod tests {
             .filter(|g| g.date == "2026-01-08")
             .collect();
         assert_eq!(week02_games.len(), 1, "Week02 should have 1 game");
+        let game2 = &week02_games[0];
+        assert_eq!(game2.player_a, "Bhavin");
+        assert_eq!(game2.player_b, "Kishan");
+        assert_eq!(game2.points_ab, 21);
+        assert_eq!(game2.player_x, "Nikhil");
+        assert_eq!(game2.player_y, "Chet");
+        assert_eq!(game2.points_xy, 19);
     }
 
     #[test]
