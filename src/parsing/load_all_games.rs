@@ -24,7 +24,7 @@ pub fn load_all_games(data_source: &str) -> GamesLoadResult {
         .filter_map(|path| path.to_str().map(|s| s.to_string()))
         .collect::<Vec<_>>();
 
-    paths.sort();
+    // paths.sort();
 
     let (games, failed_files): (Vec<_>, Vec<_>) = paths
         .iter()
